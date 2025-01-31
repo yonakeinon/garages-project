@@ -3,12 +3,18 @@ import Garage, { IGarage } from '../models/garage.model';
 
 export const fetchAndStoreGarages = async (): Promise<IGarage[]> => {
   const apiUrl =
-    'https://data.gov.il/api/3/action/datastore_search?resource_id=bb68386a-a331-4bbc-b668-bba2766d517d&limit=5';
+    'https://data.gov.il/api/3/action/datastore_search?resource_id=bb68386a-a331-4bbc-b668-bba2766d517d&limit=10';
 
   try {
     const response = await axios.get(apiUrl);
-    const records = response.data.result.records;
+    console.log('API Response:', response.status, response.data);  // Debug log
 
+    if (!response.data?.result?.records) {
+      console.error('Invalid API response structure:', response.data);
+      throw new Error('Invalid API response structure');
+    }
+
+    const records = response.data.result.records;
     console.log('-----> Check records:', records);
 
     const parsedGarages: IGarage[] = records.map((record: any) => ({
@@ -28,12 +34,19 @@ export const fetchAndStoreGarages = async (): Promise<IGarage[]> => {
 
     console.log('-----> Parsed Garages:', parsedGarages);
 
-    await Garage.insertMany(parsedGarages, { ordered: false }).catch(() => []);
+    const garagesToStore = parsedGarages.slice(0, 5);
+    await Garage.insertMany(garagesToStore, { ordered: false }).catch((err) => {
+      console.log('Insert error (might be duplicates):', err.message);
+      return [];
+    });
 
-    return await Garage.find({});
-  } catch (error) {
-    console.error('❌ Error fetching garages:', error);
-    throw new Error('Failed to fetch and store garages');
+    return parsedGarages;  // Return all fetched garages
+  } catch (error: any) {
+    console.error('❌ Error fetching garages:', error.message);
+    console.error('Full error:', error);
+    
+    // Return empty array instead of throwing
+    return [];
   }
 };
 
