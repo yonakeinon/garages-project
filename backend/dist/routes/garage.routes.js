@@ -18,10 +18,12 @@ const validateGarage_1 = require("../middleware/validateGarage");
 const router = express_1.default.Router();
 router.get('/fetch', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const garages = yield (0, garage_service_1.fetchAndStoreGarages)();
-        res.json(garages);
+        const allGarages = yield (0, garage_service_1.fetchAndStoreGarages)();
+        console.log('Fetch endpoint returning garages:', allGarages.length);
+        res.json(allGarages);
     }
     catch (error) {
+        console.error('Error in fetch endpoint:', error);
         res.status(500).json({ message: 'Error fetching garages', error });
     }
 }));

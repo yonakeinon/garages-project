@@ -6,7 +6,7 @@
     <mat-form-field class="garage-select">
       <mat-label>בחר מוסכים</mat-label>
       <mat-select [(ngModel)]="selectedGarages" multiple>
-        <mat-option *ngFor="let garage of dataSource.data" [value]="garage">
+        <mat-option *ngFor="let garage of availableGarages" [value]="garage">
           {{garage.full_name}} - {{garage.city}}
         </mat-option>
       </mat-select>
@@ -42,5 +42,6 @@
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
+
   </div>
     

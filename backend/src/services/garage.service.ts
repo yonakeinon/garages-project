@@ -3,21 +3,21 @@ import Garage, { IGarage } from '../models/garage.model';
 
 export const fetchAndStoreGarages = async (): Promise<IGarage[]> => {
   const apiUrl =
-    'https://data.gov.il/api/3/action/datastore_search?resource_id=bb68386a-a331-4bbc-b668-bba2766d517d&limit=10';
+    'https://data.gov.il/api/3/action/datastore_search?resource_id=bb68386a-a331-4bbc-b668-bba2766d517d&limit=45';
 
   try {
+    console.log('1. Starting to fetch garages from API...');
     const response = await axios.get(apiUrl);
-    console.log('API Response:', response.status, response.data);  // Debug log
-
+    
     if (!response.data?.result?.records) {
-      console.error('Invalid API response structure:', response.data);
+      console.error('No records found in API response');
       throw new Error('Invalid API response structure');
     }
 
     const records = response.data.result.records;
-    console.log('-----> Check records:', records);
+    console.log(`2. Fetched ${records.length} records from API`);
 
-    const parsedGarages: IGarage[] = records.map((record: any) => ({
+    const allGarages: IGarage[] = records.map((record: any) => ({
       mispar_mosah: record['mispar_mosah'],
       full_name: record['shem_mosah'],
       cod_sug_mosah: record['cod_sug_mosah'],
@@ -32,26 +32,36 @@ export const fetchAndStoreGarages = async (): Promise<IGarage[]> => {
       rasham_havarot: record['rasham_havarot'],
     }));
 
-    console.log('-----> Parsed Garages:', parsedGarages);
+    // Only store first 5 if DB is empty
+    const existingCount = await Garage.countDocuments();
+    if (existingCount === 0) {
+      const firstFive = allGarages.slice(0, 5);
+      console.log(`3. Database empty, storing first ${firstFive.length} garages`);
+      await Garage.insertMany(firstFive, { ordered: false })
+        .catch(err => console.log('Insert error (might be duplicates):', err.message));
+    }
 
-    const garagesToStore = parsedGarages.slice(0, 5);
-    await Garage.insertMany(garagesToStore, { ordered: false }).catch((err) => {
-      console.log('Insert error (might be duplicates):', err.message);
-      return [];
-    });
-
-    return parsedGarages;  // Return all fetched garages
-  } catch (error: any) {
-    console.error('❌ Error fetching garages:', error.message);
-    console.error('Full error:', error);
-    
-    // Return empty array instead of throwing
-    return [];
+    console.log(`4. Returning ${allGarages.length} garages for multi-select`);
+    return allGarages;
+  } catch (error) {
+    console.error('❌ Error in fetchAndStoreGarages:', error);
+    throw error;
   }
 };
 
+// Add pagination interface
+interface PaginatedGarages {
+  garages: IGarage[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export const getGarages = async (): Promise<IGarage[]> => {
-  return await Garage.find({});
+  console.log('Getting all stored garages from database...');
+  const garages = await Garage.find({});
+  console.log(`Found ${garages.length} garages in database`);
+  return garages;
 };
 
 export const addNewGarage = async (garageData: Partial<IGarage>): Promise<IGarage> => {

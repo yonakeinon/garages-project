@@ -9,11 +9,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 
 interface Garage {
-  mispar_mosah: number;
+  mispar_mosah: string;
   full_name: string;
-  address?: string;
-  city?: string;
-  phone?: string;
+  address: string;
+  city: string;
+  phone: string;
 }
 
 @Component({
@@ -37,26 +37,29 @@ interface Garage {
 })
 export class GarageListComponent implements OnInit {
   dataSource = new MatTableDataSource<Garage>([]);
+  availableGarages: Garage[] = [];
+  selectedGarages: Garage[] = [];
   displayedColumns: string[] = ['name', 'address', 'city', 'phone'];
   isLoading = false;
-  selectedGarages: Garage[] = [];
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    this.loadGarages();
+    this.loadAllGarages();
   }
 
-  loadGarages() {
+  loadAllGarages() {
     this.isLoading = true;
+    console.log('Loading all garages');
+
+    // Load all garages for the table
     this.http.get<Garage[]>('http://localhost:3000/api/garages').subscribe({
       next: (garages) => {
-        if (garages.length === 0) {
-          this.fetchGarages();
-        } else {
-          this.dataSource.data = garages;
-          this.isLoading = false;
-        }
+        console.log('All garages loaded:', garages);
+        this.dataSource.data = garages;
+
+        // Load available garages for multi-select
+        this.loadAvailableGarages();
       },
       error: (error) => {
         console.error('Error loading garages:', error);
@@ -65,14 +68,15 @@ export class GarageListComponent implements OnInit {
     });
   }
 
-  fetchGarages() {
+  loadAvailableGarages() {
     this.http.get<Garage[]>('http://localhost:3000/api/garages/fetch').subscribe({
-      next: (garages) => {
-        this.dataSource.data = garages;
+      next: (allGarages) => {
+        const tableIds = new Set(this.dataSource.data.map(g => g.mispar_mosah));
+        this.availableGarages = allGarages.filter(g => !tableIds.has(g.mispar_mosah));
         this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error fetching garages:', error);
+        console.error('Error loading available garages:', error);
         this.isLoading = false;
       }
     });
@@ -80,7 +84,7 @@ export class GarageListComponent implements OnInit {
 
   addSelectedGarages() {
     if (!this.selectedGarages.length) return;
-    
+
     this.isLoading = true;
     const addRequests = this.selectedGarages.map(garage => 
       this.http.post<Garage>('http://localhost:3000/api/garages/add', garage)
@@ -89,7 +93,7 @@ export class GarageListComponent implements OnInit {
     import('rxjs').then(({ forkJoin }) => {
       forkJoin(addRequests).subscribe({
         next: () => {
-          this.loadGarages();
+          this.loadAllGarages(); // Reload all garages after adding
           this.selectedGarages = [];
         },
         error: (error) => {

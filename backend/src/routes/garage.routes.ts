@@ -6,9 +6,11 @@ const router = express.Router();
 
 router.get('/fetch', async (req, res) => {
   try {
-    const garages = await fetchAndStoreGarages();
-    res.json(garages);
+    const allGarages = await fetchAndStoreGarages();
+    console.log('Fetch endpoint returning garages:', allGarages.length);
+    res.json(allGarages);
   } catch (error) {
+    console.error('Error in fetch endpoint:', error);
     res.status(500).json({ message: 'Error fetching garages', error });
   }
 });
